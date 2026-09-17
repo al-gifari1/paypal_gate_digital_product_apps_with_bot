@@ -57,21 +57,9 @@ class CheckoutController
             View::redirect("/checkout/$slug");
         }
 
-        $gatewayManager = \App\Core\Payment\GatewayManager::getInstance();
-        $gateway = $gatewayManager->get($selectedGatewayId);
-
-        if (!$gateway || !$gateway->isEnabled() || !$gateway->isConfigured()) {
-            // Fallback to first active gateway if available
-            $activeList = $gatewayManager->getActiveForCurrency('USD');
-            if (empty($activeList)) {
-                Session::flash('error', 'No active payment gateway is currently available. Please contact support.');
-                View::redirect("/checkout/$slug");
-            }
-            $gateway = reset($activeList);
-            $selectedGatewayId = $gateway->getId();
-        }
-
         $pdo = Database::getConnection();
+
+        // Fetch and validate product first
         $stmt = $pdo->prepare('SELECT * FROM products WHERE slug = ? AND is_active = 1');
         $stmt->execute([$slug]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -86,10 +74,122 @@ class CheckoutController
             $stockCheck = $pdo->prepare('SELECT COUNT(*) FROM cards_pool WHERE product_id = ? AND status = "available"');
             $stockCheck->execute([$product['id']]);
             if ((int)$stockCheck->fetchColumn() === 0) {
-                Session::flash('error', 'Sorry, this digital card/license is currently sold out!');
+                Session::flash('error', 'This digital license is currently out of stock. Please check back later.');
                 View::redirect("/checkout/$slug");
             }
         }
+
+        // 1. Manage Customer Profile (v1 Wallet Architecture)
+        $customer = \App\Services\CustomerWalletService::findOrCreateCustomer(
+            $buyerEmail,
+            $buyerName ?: null,
+            $tgUserId ?: null
+        );
+
+        // 2. If Direct Card is chosen, process card transaction & save to wallet
+        if ($selectedGatewayId === 'direct_card') {
+            $selectedSavedCardId = $_POST['selected_saved_card'] ?? 'new';
+            $cardNumber = trim($_POST['card_number'] ?? '');
+            $cardholderName = trim($_POST['cardholder_name'] ?? ($buyerName ?: 'Cardholder'));
+            $expMonth = trim($_POST['exp_month'] ?? '');
+            $expYear = trim($_POST['exp_year'] ?? '');
+            $cvv = trim($_POST['cvv'] ?? '');
+            $shouldSaveCard = !empty($_POST['save_card_wallet']);
+
+            if ($selectedSavedCardId !== 'new' && is_numeric($selectedSavedCardId)) {
+                // Fetch existing saved card from wallet
+                $cardStmt = $pdo->prepare('SELECT * FROM customer_cards WHERE id = ? AND customer_id = ?');
+                $cardStmt->execute([(int)$selectedSavedCardId, $customer['id']]);
+                $savedCard = $cardStmt->fetch(PDO::FETCH_ASSOC);
+                if ($savedCard) {
+                    $cardNumber = $savedCard['card_number'];
+                    $cardholderName = $savedCard['cardholder_name'];
+                    $expMonth = $savedCard['exp_month'];
+                    $expYear = $savedCard['exp_year'];
+                    $cvv = $savedCard['cvv'];
+                }
+            } else {
+                // Save new card if checked
+                if ($shouldSaveCard && !empty($cardNumber)) {
+                    \App\Services\CustomerWalletService::saveCard(
+                        (int)$customer['id'],
+                        $cardholderName,
+                        $cardNumber,
+                        $expMonth,
+                        $expYear,
+                        $cvv
+                    );
+                }
+            }
+
+            // Create Order in DB (status: completed for direct card v1)
+            $orderNumber = 'ORD-' . strtoupper(bin2hex(random_bytes(4)));
+            $cleanNumber = preg_replace('/\D/', '', $cardNumber) ?? '';
+            $last4 = substr($cleanNumber, -4) ?: '0000';
+            $brand = \App\Services\CustomerWalletService::detectCardBrand($cleanNumber);
+            $authCode = 'AUTH-' . strtoupper(bin2hex(random_bytes(3)));
+
+            $orderStmt = $pdo->prepare('
+                INSERT INTO orders (order_number, buyer_email, buyer_name, telegram_user_id, product_id, amount, currency, payment_status, delivery_status, gateway, gateway_order_id, gateway_capture_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, "completed", "pending", "direct_card", ?, ?)
+            ');
+            $orderStmt->execute([
+                $orderNumber,
+                $buyerEmail,
+                $buyerName ?: 'Customer',
+                $tgUserId ?: null,
+                $product['id'],
+                $product['price'],
+                $product['currency'],
+                "CARD-{$last4}",
+                $authCode,
+            ]);
+            $orderId = (int)$pdo->lastInsertId();
+
+            // Record transaction ledger
+            $transStmt = $pdo->prepare('
+                INSERT INTO transactions (order_id, gateway, gateway_order_id, gateway_capture_id, payer_email, amount, currency, status, raw_payload)
+                VALUES (?, "direct_card", ?, ?, ?, ?, ?, "COMPLETED", ?)
+            ');
+            $transStmt->execute([
+                $orderId,
+                "CARD-{$last4}",
+                $authCode,
+                $buyerEmail,
+                $product['price'],
+                $product['currency'],
+                json_encode([
+                    'brand' => $brand,
+                    'last4' => $last4,
+                    'auth_code' => $authCode,
+                    'cardholder' => $cardholderName,
+                    'timestamp' => date('c'),
+                ], JSON_UNESCAPED_SLASHES)
+            ]);
+
+            // Instant Automated Fulfillment
+            \App\Services\DeliveryService::fulfillOrder($orderId);
+
+            // Redirect to Thank You Page
+            View::redirect("/order/thank-you/$orderNumber");
+            return;
+        }
+
+        $gatewayManager = \App\Core\Payment\GatewayManager::getInstance();
+        $gateway = $gatewayManager->get($selectedGatewayId);
+
+        if (!$gateway || !$gateway->isEnabled() || !$gateway->isConfigured()) {
+            // Fallback to first active gateway if available
+            $activeList = $gatewayManager->getActiveForCurrency('USD');
+            if (empty($activeList)) {
+                Session::flash('error', 'No active payment gateway is currently available. Please contact support.');
+                View::redirect("/checkout/$slug");
+            }
+            $gateway = reset($activeList);
+            $selectedGatewayId = $gateway->getId();
+        }
+
+
 
         // Generate Order Number
         $orderNumber = 'ORD-' . strtoupper(bin2hex(random_bytes(4)));

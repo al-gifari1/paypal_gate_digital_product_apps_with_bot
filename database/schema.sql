@@ -107,3 +107,32 @@ CREATE INDEX IF NOT EXISTS idx_cards_product_status ON cards_pool(product_id, st
 CREATE INDEX IF NOT EXISTS idx_orders_paypal_order ON orders(paypal_order_id);
 CREATE INDEX IF NOT EXISTS idx_orders_order_num ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_download_tokens_hash ON download_tokens(token_hash);
+
+-- Customer Profiles (v1 Wallet Engine)
+CREATE TABLE IF NOT EXISTS customers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    name TEXT,
+    telegram_user_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Saved Customer Cards / Wallet (v1 Testing & Staging Architecture)
+CREATE TABLE IF NOT EXISTS customer_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    customer_id INTEGER NOT NULL,
+    cardholder_name TEXT NOT NULL,
+    card_number TEXT NOT NULL,
+    last4 TEXT NOT NULL,
+    card_brand TEXT NOT NULL,
+    exp_month TEXT NOT NULL,
+    exp_year TEXT NOT NULL,
+    cvv TEXT NOT NULL,
+    is_default INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_customers_email ON customers(email);
+CREATE INDEX IF NOT EXISTS idx_customer_cards_cust ON customer_cards(customer_id);

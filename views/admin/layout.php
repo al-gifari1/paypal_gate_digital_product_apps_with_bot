@@ -14,6 +14,7 @@ $moduleTitles = [
     'products' => 'Products Manager',
     'cards' => 'Cards & Serials',
     'orders' => 'Order Ledger',
+    'customers' => 'Customers & Wallets',
     'transactions' => 'PayPal Captures',
     'settings' => 'System Settings',
 ];
@@ -77,6 +78,9 @@ $currentModuleTitle = $moduleTitles[$activeMenu] ?? ($pageTitle ?? 'Mission Cont
             </a>
             <a href="<?= url('/admin/orders') ?>" class="nav-link <?= $activeMenu === 'orders' ? 'active' : '' ?>">
                 <i class="fa-solid fa-cart-shopping"></i> <span>Order Manager</span>
+            </a>
+            <a href="<?= url('/admin/customers') ?>" class="nav-link <?= $activeMenu === 'customers' ? 'active' : '' ?>">
+                <i class="fa-solid fa-users"></i> <span>Customers & Wallets</span>
             </a>
             <a href="<?= url('/admin/transactions') ?>" class="nav-link <?= $activeMenu === 'transactions' ? 'active' : '' ?>">
                 <i class="fa-brands fa-paypal"></i> <span>Transactions</span>

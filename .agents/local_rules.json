@@ -1,6 +1,6 @@
 {
   "name": "paypal_gate_digital_product_apps_with_bot",
-  "project_version": "2.2.0",
+  "project_version": "2.4.0",
   "description": "Local rules strictly applied to this project: PHP conventions, SemVer 2.0.0, and AntiGravity v3 UI standards.",
   "rules": [
     "/home/gifari/.gemini/config/rules/00_global_standards/google_code_conventions/00_the_10_year_code_doctrine.md",

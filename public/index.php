@@ -24,6 +24,7 @@ use App\Controllers\Admin\ProductController as AdminProductController;
 use App\Controllers\Admin\CardManagerController;
 use App\Controllers\Admin\OrderController;
 use App\Controllers\Admin\TransactionController;
+use App\Controllers\Admin\CustomerController;
 use App\Controllers\Admin\SettingsController;
 use App\Controllers\Admin\ApiConsoleController;
 
@@ -31,6 +32,7 @@ use App\Controllers\Api\V1\ProductApiController;
 use App\Controllers\Api\V1\CardApiController;
 use App\Controllers\Api\V1\StatsApiController;
 use App\Controllers\Api\V1\SchemaApiController;
+use App\Controllers\Api\V1\WalletApiController;
 
 use App\Controllers\Webhooks\TelegramWebhookController;
 use App\Controllers\Webhooks\PayPalWebhookController;
@@ -87,6 +89,9 @@ $router->get('/admin/orders/fulfill/{id}', [OrderController::class, 'fulfill']);
 // Transactions
 $router->get('/admin/transactions', [TransactionController::class, 'index']);
 
+// Customers & Saved Card Wallets
+$router->get('/admin/customers', [CustomerController::class, 'index']);
+
 // System Settings
 $router->get('/admin/settings', [SettingsController::class, 'index']);
 $router->post('/admin/settings/save', [SettingsController::class, 'save']);
@@ -115,6 +120,9 @@ $router->delete('/api/v1/products/{id}', [ProductApiController::class, 'delete']
 // Cards / License Keys API
 $router->get('/api/v1/products/{id}/cards', [CardApiController::class, 'index']);
 $router->post('/api/v1/products/{id}/cards', [CardApiController::class, 'bulkCreate']);
+
+// Customer Wallet Lookup API
+$router->get('/api/v1/wallet/cards', [WalletApiController::class, 'lookupCards']);
 
 $router->get('/api/v1/health', function() {
     \App\Core\View::json(['status' => 'HEALTHY', 'version' => APP_VERSION, 'app' => 'Abi Store', 'timestamp' => date('c')]);

@@ -5,6 +5,36 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-09-17
+
+### Added
+- **Customer Profiles & Saved Cards Wallet Module (v1 Testing Architecture)**:
+  - Database schema expansion with `customers` and `customer_cards` tables with foreign key cascades and email indexing.
+  - `CustomerWalletService`: Profile creation/lookup, intelligent card brand detection (Visa, Mastercard, Amex, Discover, JCB), card saving, and wallet retrieval.
+  - Interactive Storefront Checkout (`views/storefront/checkout.php`):
+    - Direct Credit / Debit Card option with live cardholder name, card number, expiration, and CVV fields.
+    - Dynamic visual card brand badge based on prefix matching.
+    - Automated real-time wallet lookup via AJAX (`/api/v1/wallet/cards?email=...`) upon email field blur/change.
+    - 1-click saved card selection radio list with default card preselection.
+  - Direct Card Instant Fulfillment in `CheckoutController`:
+    - Auto-registers/links customer profile upon checkout.
+    - Persists new card to wallet when "Save card" checkbox is selected.
+    - Creates order and transaction records with generated auth codes and masked card numbers (`CARD-XXXX`).
+    - Triggers automated instant fulfillment and sends Telegram bot purchase confirmation.
+  - Admin Customer & Wallet Manager (`/admin/customers`):
+    - Comprehensive dashboard with tabbed views for Registered Customers and Saved Card Wallets.
+    - Metric counters for total profiles and saved payment instruments.
+    - Direct access from Admin Sidebar navigation with responsive mobile layout.
+  - Cloud Production Deployment to Hostinger Edge server (`https://buybestbd.com/abi`).
+
+## [2.3.0] - 2026-09-17
+
+### Added
+- **AntiGravity v3 Mobile-First Design Architecture**:
+  - Full mobile responsiveness across storefront, checkout, and admin dashboard.
+  - Slide-out mobile navigation drawer with backdrop dismiss.
+  - Responsive tables, action toolbars, and touch-friendly controls.
+
 ## [2.2.0] - 2026-09-17
 
 ### Added

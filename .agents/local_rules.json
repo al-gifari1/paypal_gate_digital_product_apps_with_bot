@@ -1,0 +1,19 @@
+{
+  "name": "paypal_gate_digital_product_apps_with_bot",
+  "project_version": "2.1.0",
+  "description": "Local rules strictly applied to this project: PHP conventions, SemVer 2.0.0, and AntiGravity v3 UI standards.",
+  "rules": [
+    "/home/gifari/.gemini/config/rules/00_global_standards/google_code_conventions/00_the_10_year_code_doctrine.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/google_code_conventions/01_single_responsibility_and_file_limits.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/google_code_conventions/02_strict_typing_and_immutability.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/google_code_conventions/04_error_handling_and_status_codes.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/rule_elite_coding_standards.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/versioning_and_evolution/01_semver_and_architectural_lifecycle.md",
+    "/home/gifari/.gemini/config/rules/00_global_standards/versioning_and_evolution/04_adr_architectural_decision_records.md",
+    "/home/gifari/.gemini/config/rules/04_frontend/antigravity_v3_design_system/00_core_canvas_and_tokens.md",
+    "/home/gifari/.gemini/config/rules/04_frontend/antigravity_v3_design_system/03_elevation_and_zero_border.md",
+    "/home/gifari/.gemini/config/rules/04_frontend/antigravity_v3_design_system/04_buttons_and_controls.md",
+    "/home/gifari/.gemini/config/rules/04_frontend/antigravity_v3_design_system/07_modals_and_toast_engine.md",
+    "/home/gifari/.gemini/config/rules/04_frontend/antigravity_v3_design_system/08_tables_and_data_grids.md"
+  ]
+}

@@ -1,0 +1,21 @@
+# Temporary and environment files
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+
+# Storage sessions, logs, and temporary uploads
+storage/sessions/*
+storage/logs/*
+!storage/sessions/.gitkeep
+!storage/logs/.gitkeep
+!storage/uploads/.gitkeep
+
+# SQLite database lock / journal files
+database/database.sqlite-shm
+database/database.sqlite-wal
+
+# Vendor and dependencies
+/vendor/
+node_modules/

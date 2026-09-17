@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#0284c7" />
+    </linearGradient>
+    <pattern id="grid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(56, 189, 248, 0.12)" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="600" height="380" fill="url(#bgGrad)"/>
+  <rect width="600" height="380" fill="url(#grid)"/>
+  <g transform="translate(60, 60)">
+    <rect x="0" y="0" width="480" height="260" rx="10" fill="#1e293b" opacity="0.9" stroke="#38bdf8" stroke-width="1.5"/>
+    <circle cx="30" cy="30" r="6" fill="#ef4444"/>
+    <circle cx="50" cy="30" r="6" fill="#f59e0b"/>
+    <circle cx="70" cy="30" r="6" fill="#22c55e"/>
+    <text x="100" y="34" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="bold" fill="#94a3b8">algo_engine_core.py</text>
+    
+    <!-- Code preview lines -->
+    <text x="30" y="80" font-family="'JetBrains Mono', monospace" font-size="13" fill="#38bdf8">&gt; class AlgoBotEngine:</text>
+    <text x="50" y="110" font-family="'JetBrains Mono', monospace" font-size="13" fill="#4ade80">   def execute_spread_arbitrage():</text>
+    <text x="70" y="140" font-family="'JetBrains Mono', monospace" font-size="13" fill="#f8fafc">      latency_ms = 0.42</text>
+    <text x="70" y="170" font-family="'JetBrains Mono', monospace" font-size="13" fill="#fbbf24">      return execute_order(status="INSTANT")</text>
+    
+    <!-- Badge -->
+    <rect x="30" y="205" width="130" height="28" rx="4" fill="#0369a1"/>
+    <text x="45" y="224" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="bold" fill="#ffffff">HIGH-SPEED CORE</text>
+  </g>
+</svg>

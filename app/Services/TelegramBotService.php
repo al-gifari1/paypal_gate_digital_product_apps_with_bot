@@ -241,12 +241,12 @@ class TelegramBotService
             . "<b>Category:</b> $typeLabel\n"
             . "<b>Price:</b> \${$price} {$prod['currency']}\n\n"
             . "<b>Description:</b>\n" . htmlspecialchars($prod['description'] ?? 'No description.') . "\n\n"
-            . "⚡ <i>Instant automated delivery to this chat immediately after PayPal payment!</i>";
+            . "⚡ <i>Instant automated delivery to this chat immediately after payment!</i>";
 
         $keyboard = [
             'inline_keyboard' => [
                 [
-                    ['text' => '💳 Buy Now with PayPal', 'url' => $checkoutUrl],
+                    ['text' => '💳 Buy Now (PayPal / Crypto / Cards)', 'url' => $checkoutUrl],
                 ],
                 [
                     ['text' => '⬅️ Back to Shop', 'callback_data' => 'nav_shop'],
@@ -307,11 +307,11 @@ class TelegramBotService
         $appUrl = SettingsService::getAppUrl();
         $currency = SettingsService::getCurrency();
 
-        $text = "<b>💳 PayPal Payment & Checkout Guide:</b>\n\n"
-            . "1. We accept <b>PayPal Business Gateway</b> payments ($currency) via credit/debit card or PayPal balance.\n"
-            . "2. Every purchase is 100% automated — your digital item or download token is generated instantly once PayPal confirms the transaction.\n"
-            . "3. You will receive your files right here in Telegram and on the Thank You screen.\n\n"
-            . "Tap below to view the store and checkout:";
+        $text = "<b>💳 Secure Payment & Instant Delivery:</b>\n\n"
+            . "1. We accept multiple payment options including <b>PayPal</b> and <b>Crypto (USDT, TRX, Cards)</b> ($currency).\n"
+            . "2. Every purchase is 100% automated — your digital item or download token is generated instantly once transaction confirms.\n"
+            . "3. You will receive your files right here in Telegram and on your Thank You screen.\n\n"
+            . "Tap below to visit the store and checkout:";
 
         $keyboard = [
             'inline_keyboard' => [

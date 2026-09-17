@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS orders (
     amount DECIMAL(10, 2) NOT NULL,
     currency TEXT NOT NULL DEFAULT 'USD',
     payment_status TEXT NOT NULL DEFAULT 'pending' CHECK(payment_status IN ('pending', 'completed', 'refunded', 'failed')),
+    gateway TEXT NOT NULL DEFAULT 'paypal',
+    gateway_order_id TEXT,
+    gateway_capture_id TEXT,
     paypal_order_id TEXT,
     paypal_capture_id TEXT,
     delivery_status TEXT NOT NULL DEFAULT 'pending' CHECK(delivery_status IN ('pending', 'delivered')),
@@ -80,10 +83,13 @@ CREATE TABLE IF NOT EXISTS download_tokens (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- PayPal Transactions Audit Ledger
+-- Payment Transactions Audit Ledger (All Providers)
 CREATE TABLE IF NOT EXISTS transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     order_id INTEGER,
+    gateway TEXT NOT NULL DEFAULT 'paypal',
+    gateway_order_id TEXT,
+    gateway_capture_id TEXT,
     paypal_order_id TEXT,
     paypal_capture_id TEXT,
     payer_email TEXT,

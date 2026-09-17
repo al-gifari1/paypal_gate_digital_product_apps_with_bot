@@ -5,10 +5,12 @@ use App\Services\SettingsService;
 
 $appUrl = SettingsService::getAppUrl();
 $paypalWebhookUrl = rtrim($appUrl, '/') . '/api/paypal/webhook';
+$frideWebhookUrl = rtrim($appUrl, '/') . '/payment/webhook/fride';
 $telegramWebhookUrl = rtrim($appUrl, '/') . '/api/telegram/webhook';
 
 $isLive = ($settings['paypal_mode'] ?? 'sandbox') === 'live';
 $paypalReady = !empty($settings['paypal_client_id']) && !empty($settings['paypal_client_secret']);
+$frideReady = !empty($settings['fride_api_key']) && !empty($settings['fride_merchant_id']);
 $botReady = !empty($settings['telegram_bot_token']);
 ?>
 
@@ -79,6 +81,10 @@ $botReady = !empty($settings['telegram_bot_token']);
         <button type="button" class="settings-tab-btn" data-tab="tab-paypal">
             <i class="fa-brands fa-paypal"></i>
             <span>PayPal Gateway</span>
+        </button>
+        <button type="button" class="settings-tab-btn" data-tab="tab-fride">
+            <i class="fa-solid fa-bolt"></i>
+            <span>Fride.io Pay (Crypto/Cards)</span>
         </button>
         <button type="button" class="settings-tab-btn" data-tab="tab-telegram">
             <i class="fa-brands fa-telegram"></i>
@@ -200,6 +206,79 @@ $botReady = !empty($settings['telegram_bot_token']);
                         <span class="settings-code-text"><?= Security::escape($paypalWebhookUrl) ?></span>
                         <button type="button" class="btn-copy-code" data-copy="<?= Security::escape($paypalWebhookUrl) ?>">
                             <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB: Fride.io Pay Gateway -->
+        <div class="settings-tab-pane" id="tab-fride">
+            <div class="panel-surface">
+                <div class="panel-header">
+                    <div class="panel-title">
+                        <i class="fa-solid fa-bolt" style="color: #eab308;"></i>
+                        <span>Fride.io Payment Gateway (Crypto USDT/TRX & Cards)</span>
+                    </div>
+                    <span class="mobile-only-pill <?= $frideReady ? 'live' : 'sandbox' ?>" style="display: inline-block;">
+                        <?= $frideReady ? 'ACTIVE' : 'OFFLINE' ?>
+                    </span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="gateway_fride_enabled">Enable Fride.io Gateway at Checkout</label>
+                    <select id="gateway_fride_enabled" name="gateway_fride_enabled" class="form-control">
+                        <option value="0" <?= ($settings['gateway_fride_enabled'] ?? '0') === '0' ? 'selected' : '' ?>>
+                            Disabled (Hidden from Customer Checkout)
+                        </option>
+                        <option value="1" <?= ($settings['gateway_fride_enabled'] ?? '0') === '1' ? 'selected' : '' ?>>
+                            Enabled (Show Crypto/Card Option on Storefront)
+                        </option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fride_merchant_id">Fride Merchant ID (UUID)</label>
+                    <input type="text" id="fride_merchant_id" name="fride_merchant_id" class="form-control" 
+                           value="<?= Security::escape($settings['fride_merchant_id'] ?? '') ?>" 
+                           placeholder="3fa85f64-5717-4562-b3fc-2c963f66afa6" spellcheck="false">
+                    <div class="settings-field-hint">Found in your Fride.io cabinet under Merchant Settings.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fride_api_key">Fride API Key (Merchant Owner Key)</label>
+                    <div class="input-action-wrapper">
+                        <input type="password" id="fride_api_key" name="fride_api_key" class="form-control" 
+                               value="<?= Security::escape($settings['fride_api_key'] ?? '') ?>" 
+                               placeholder="Enter your Fride API key" autocomplete="new-password">
+                        <button type="button" class="input-action-btn password-toggle-btn" data-target="fride_api_key" title="Toggle Visibility">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="settings-field-hint">Must be created by the Merchant Owner account.</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fride_webhook_secret">Fride Webhook Secret Key (HMAC Verification)</label>
+                    <div class="input-action-wrapper">
+                        <input type="password" id="fride_webhook_secret" name="fride_webhook_secret" class="form-control" 
+                               value="<?= Security::escape($settings['fride_webhook_secret'] ?? '') ?>" 
+                               placeholder="Secret key from API Keys > Webhook settings" autocomplete="new-password">
+                        <button type="button" class="input-action-btn password-toggle-btn" data-target="fride_webhook_secret" title="Toggle Visibility">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Fride Webhook Notification URL</label>
+                    <div class="settings-field-hint">
+                        Copy and paste this URL into your Fride.io Merchant Settings as Webhook URL:
+                    </div>
+                    <div class="settings-code-box">
+                        <span class="settings-code-text"><?= Security::escape($frideWebhookUrl) ?></span>
+                        <button type="button" class="btn-copy-code" data-copy="<?= Security::escape($frideWebhookUrl) ?>">
+                            <i class="fa-solid fa-copy"></i> Copy URL
                         </button>
                     </div>
                 </div>

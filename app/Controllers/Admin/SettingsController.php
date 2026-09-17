@@ -41,6 +41,11 @@ class SettingsController
             'paypal_client_id',
             'paypal_client_secret',
             'paypal_webhook_id',
+            'gateway_paypal_enabled',
+            'gateway_fride_enabled',
+            'fride_merchant_id',
+            'fride_api_key',
+            'fride_webhook_secret',
             'telegram_bot_token',
             'telegram_admin_chat_id',
         ];

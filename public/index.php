@@ -34,6 +34,7 @@ use App\Controllers\Api\V1\SchemaApiController;
 
 use App\Controllers\Webhooks\TelegramWebhookController;
 use App\Controllers\Webhooks\PayPalWebhookController;
+use App\Controllers\Webhooks\PaymentWebhookController;
 
 Session::start();
 
@@ -122,6 +123,11 @@ $router->get('/api/v1/health', function() {
 // ==========================================
 // WEBHOOK ROUTES
 // ==========================================
+// Pluggable Unified Payment Webhook Route
+$router->post('/payment/webhook/{gateway}', [PaymentWebhookController::class, 'handle']);
+$router->post('/api/payment/webhook/{gateway}', [PaymentWebhookController::class, 'handle']);
+
+// Legacy and Specific Provider Aliases
 $router->post('/api/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 $router->post('/telegram/webhook', [TelegramWebhookController::class, 'handle']);
 $router->get('/telegram/webhook', [TelegramWebhookController::class, 'handle']);

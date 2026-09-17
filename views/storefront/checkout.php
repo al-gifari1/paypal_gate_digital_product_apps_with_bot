@@ -70,15 +70,51 @@ use App\Core\Session;
                 </span>
             </div>
 
+            <!-- Pluggable Payment Gateway Selector -->
+            <div>
+                <label style="display: block; font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">
+                    Select Payment Method *
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                    <?php 
+                    $firstGw = true;
+                    if (!empty($activeGateways)):
+                        foreach ($activeGateways as $gw): 
+                            $gwId = Security::escape($gw->getId());
+                    ?>
+                        <label style="background: var(--bg-card); border: 2px solid var(--border-subtle); padding: 12px 14px; border-radius: var(--radius-btn); cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s;" class="gateway-option-card">
+                            <input type="radio" name="payment_gateway" value="<?= $gwId ?>" <?= $firstGw ? 'checked' : '' ?> style="accent-color: var(--accent);">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                    <i class="<?= Security::escape($gw->getIcon()) ?>" style="color: var(--accent);"></i>
+                                    <?= Security::escape($gw->getName()) ?>
+                                </div>
+                                <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                                    <?= Security::escape($gw->getDescription()) ?>
+                                </div>
+                            </div>
+                        </label>
+                    <?php 
+                            $firstGw = false;
+                        endforeach; 
+                    else: ?>
+                        <div style="background: #1e293b; padding: 12px; border-radius: 6px; color: #94a3b8; font-size: 12px;">
+                            <i class="fa-solid fa-circle-exclamation"></i> PayPal Gateway is currently active as default.
+                            <input type="hidden" name="payment_gateway" value="paypal">
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
             <div style="margin-top: 10px;">
-                <button type="submit" class="nav-btn primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 15px; font-weight: 700; background: #0070ba;">
-                    <i class="fa-brands fa-paypal" style="font-size: 18px;"></i> Continue to PayPal Checkout &bull; $<?= number_format((float)$product['price'], 2) ?>
+                <button type="submit" class="nav-btn primary" style="width: 100%; justify-content: center; padding: 14px; font-size: 15px; font-weight: 700;">
+                    <i class="fa-solid fa-lock" style="font-size: 16px;"></i> Proceed to Secure Payment &bull; $<?= number_format((float)$product['price'], 2) ?>
                 </button>
             </div>
         </div>
     </form>
 
     <div style="text-align: center; font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 8px;">
-        <i class="fa-solid fa-lock"></i> Transactions are securely authorized by PayPal. You will return here for instant fulfillment.
+        <i class="fa-solid fa-shield-halved"></i> 256-Bit Cryptographic SSL Security &bull; Zero-Trust Instant Product Delivery
     </div>
 </div>

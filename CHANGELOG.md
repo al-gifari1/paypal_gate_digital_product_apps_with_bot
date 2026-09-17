@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-09-17
+
+### Added
+- **Enterprise Pluggable Payment Gateway Engine (`app/Core/Payment`)**:
+  - Implemented Strategy & Adapter pattern with `PaymentGatewayInterface` contract.
+  - Created type-safe DTOs: `ChargeRequest`, `ChargeResponse`, `WebhookResult`.
+  - Dynamic provider registry and runtime factory via `GatewayManager`.
+  - Zero-Trust cryptographic validation helper `ZeroTrustVerifier` with timing-attack safe comparisons (`hash_equals`) and replay prevention.
+- **Fride.io Payment Provider Driver (`app/Gateways/Providers/Fride`)**:
+  - Full API integration supporting Crypto (USDT, TRX, BTC), SBP, and Bank Cards.
+  - Complete `FrideClient` for invoice creation (`POST /invoice/create`) and status polling (`GET /invoice/getInfo`).
+  - Production `WebhookValidator` with exact HMAC-SHA256 signature verification matching official Fride.io algorithms.
+  - Full developer technical specification in `docs/FRIDE_IO_API_SPEC.md`.
+- **PayPal Provider Driver (`app/Gateways/Providers/Paypal`)**:
+  - Refactored PayPal payment capture and webhook handling into a pluggable driver implementing `PaymentGatewayInterface`.
+- **Dynamic Storefront Gateway Selector**:
+  - Automatic rendering of active and configured payment gateways on `/checkout/{slug}`.
+  - Graceful fallback routing when a specific provider is disabled or unsupported.
+- **Unified Webhook Dispatcher**:
+  - Single pluggable route `/payment/webhook/{gateway}` dynamically delegating validation and fulfillment to the respective driver.
+- **Admin Gateway Console (`/admin/settings`)**:
+  - Integrated dedicated Fride.io settings tab: enable/disable toggle, Merchant ID, API key, Webhook Secret, and live webhook URL display.
+
 ## [2.1.0] - 2026-09-17
 
 ### Added

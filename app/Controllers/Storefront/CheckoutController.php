@@ -33,10 +33,14 @@ class CheckoutController
             View::redirect('/');
         }
 
+        // Gateways for checkout
+        $activeGateways = \App\Core\Payment\GatewayManager::getInstance()->getActiveForCurrency($product['currency']);
+
         View::render('storefront/checkout', [
             'pageTitle' => 'Checkout: ' . $product['name'],
             'product' => $product,
             'tgUserId' => $tgUserId,
+            'activeGateways' => $activeGateways,
         ], 'storefront/layout');
     }
 
@@ -46,10 +50,25 @@ class CheckoutController
         $buyerEmail = trim($_POST['buyer_email'] ?? '');
         $buyerName = trim($_POST['buyer_name'] ?? '');
         $tgUserId = trim($_POST['telegram_user_id'] ?? '');
+        $selectedGatewayId = strtolower(trim($_POST['payment_gateway'] ?? 'paypal'));
 
         if (!filter_var($buyerEmail, FILTER_VALIDATE_EMAIL)) {
             Session::flash('error', 'A valid email address is required to receive your purchase details.');
             View::redirect("/checkout/$slug");
+        }
+
+        $gatewayManager = \App\Core\Payment\GatewayManager::getInstance();
+        $gateway = $gatewayManager->get($selectedGatewayId);
+
+        if (!$gateway || !$gateway->isEnabled() || !$gateway->isConfigured()) {
+            // Fallback to first active gateway if available
+            $activeList = $gatewayManager->getActiveForCurrency('USD');
+            if (empty($activeList)) {
+                Session::flash('error', 'No active payment gateway is currently available. Please contact support.');
+                View::redirect("/checkout/$slug");
+            }
+            $gateway = reset($activeList);
+            $selectedGatewayId = $gateway->getId();
         }
 
         $pdo = Database::getConnection();
@@ -75,10 +94,10 @@ class CheckoutController
         // Generate Order Number
         $orderNumber = 'ORD-' . strtoupper(bin2hex(random_bytes(4)));
 
-        // Create Order in DB (status: pending)
+        // Create Order in DB (status: pending, gateway set)
         $orderStmt = $pdo->prepare('
-            INSERT INTO orders (order_number, buyer_email, buyer_name, telegram_user_id, product_id, amount, currency, payment_status, delivery_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, "pending", "pending")
+            INSERT INTO orders (order_number, buyer_email, buyer_name, telegram_user_id, product_id, amount, currency, payment_status, delivery_status, gateway)
+            VALUES (?, ?, ?, ?, ?, ?, ?, "pending", "pending", ?)
         ');
         $orderStmt->execute([
             $orderNumber,
@@ -88,37 +107,56 @@ class CheckoutController
             $product['id'],
             $product['price'],
             $product['currency'],
+            $selectedGatewayId,
         ]);
         $orderId = (int)$pdo->lastInsertId();
 
         $appUrl = SettingsService::getAppUrl();
-        $returnUrl = "$appUrl/checkout/complete?order_number=$orderNumber";
-        $cancelUrl = "$appUrl/checkout/cancel?order_number=$orderNumber";
+        $returnUrl = "$appUrl/checkout/complete?order_number=$orderNumber&gateway=$selectedGatewayId";
+        $cancelUrl = "$appUrl/checkout/cancel?order_number=$orderNumber&gateway=$selectedGatewayId";
 
         try {
-            $paypalOrder = PayPalService::createOrder(
-                (float)$product['price'],
-                $product['currency'],
-                $returnUrl,
-                $cancelUrl,
-                "Purchase: {$product['name']} (Order #$orderNumber)",
-                (string)$orderId
+            $chargeReq = new \App\Core\Payment\DTO\ChargeRequest(
+                orderId: $orderId,
+                orderNumber: $orderNumber,
+                amount: (float)$product['price'],
+                currency: (string)$product['currency'],
+                buyerEmail: $buyerEmail,
+                buyerName: $buyerName ?: 'Customer',
+                productName: (string)$product['name'],
+                returnUrl: $returnUrl,
+                cancelUrl: $cancelUrl,
+                telegramUserId: $tgUserId ?: null,
+                customFields: [
+                    'order_number' => $orderNumber,
+                    'order_id' => (string)$orderId,
+                ]
             );
 
-            // Update PayPal order ID in orders table
-            $upd = $pdo->prepare('UPDATE orders SET paypal_order_id = ? WHERE id = ?');
-            $upd->execute([$paypalOrder['id'], $orderId]);
+            $chargeRes = $gateway->createCharge($chargeReq);
 
-            if (empty($paypalOrder['approval_url'])) {
-                throw new RuntimeException('PayPal did not return an approval link.');
+            if (!$chargeRes->success || empty($chargeRes->redirectUrl)) {
+                throw new RuntimeException($chargeRes->errorMessage ?: 'Payment gateway failed to initialize checkout session.');
             }
 
-            // Redirect customer to PayPal Gateway
-            header('Location: ' . $paypalOrder['approval_url']);
+            // Update gateway order id
+            $upd = $pdo->prepare('
+                UPDATE orders 
+                SET gateway_order_id = ?, paypal_order_id = ? 
+                WHERE id = ?
+            ');
+            $upd->execute([
+                $chargeRes->gatewayOrderId,
+                $selectedGatewayId === 'paypal' ? $chargeRes->gatewayOrderId : null,
+                $orderId
+            ]);
+
+            // Redirect customer to secure payment page
+            header('Location: ' . $chargeRes->redirectUrl);
             exit;
 
         } catch (\Throwable $e) {
-            Session::flash('error', 'PayPal Checkout Error: ' . $e->getMessage());
+            Session::flash('error', $gateway->getName() . ' Checkout Error: ' . $e->getMessage());
             View::redirect("/checkout/$slug");
         }
     }
@@ -126,9 +164,10 @@ class CheckoutController
     public function complete(): void
     {
         $orderNumber = $_GET['order_number'] ?? '';
+        $gatewayId = strtolower($_GET['gateway'] ?? 'paypal');
         $paypalToken = $_GET['token'] ?? ''; // PayPal Order ID in return URL
 
-        if (empty($orderNumber) || empty($paypalToken)) {
+        if (empty($orderNumber)) {
             View::redirect('/');
         }
 
@@ -141,58 +180,48 @@ class CheckoutController
             View::redirect('/');
         }
 
-        // If already completed, just view thank you page
+        // If already completed (e.g. by Webhook), view thank you page directly
         if ($order['payment_status'] === 'completed') {
             View::redirect("/order/thank-you/$orderNumber");
         }
 
-        try {
-            // Capture the order from PayPal
-            $capture = PayPalService::captureOrder($paypalToken);
+        // For PayPal, if return URL with token is present, perform synchronous capture
+        if ($gatewayId === 'paypal' && !empty($paypalToken)) {
+            try {
+                $capture = PayPalService::captureOrder($paypalToken);
 
-            // Record transaction
-            $transStmt = $pdo->prepare('
-                INSERT INTO transactions (order_id, paypal_order_id, paypal_capture_id, payer_email, amount, currency, status, raw_payload)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ');
-            $transStmt->execute([
-                $order['id'],
-                $paypalToken,
-                $capture['capture_id'],
-                $capture['payer_email'] ?: $order['buyer_email'],
-                $order['amount'],
-                $order['currency'],
-                $capture['status'],
-                json_encode($capture['raw'], JSON_UNESCAPED_SLASHES),
-            ]);
+                $transStmt = $pdo->prepare('
+                    INSERT INTO transactions (order_id, gateway, gateway_order_id, gateway_capture_id, paypal_order_id, paypal_capture_id, payer_email, amount, currency, status, raw_payload)
+                    VALUES (?, "paypal", ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ');
+                $transStmt->execute([
+                    $order['id'],
+                    $paypalToken,
+                    $capture['capture_id'],
+                    $paypalToken,
+                    $capture['capture_id'],
+                    $capture['payer_email'] ?: $order['buyer_email'],
+                    $order['amount'],
+                    $order['currency'],
+                    $capture['status'],
+                    json_encode($capture['raw'], JSON_UNESCAPED_SLASHES),
+                ]);
 
-            // Update order with capture id
-            $updOrder = $pdo->prepare('UPDATE orders SET paypal_capture_id = ? WHERE id = ?');
-            $updOrder->execute([$capture['capture_id'], $order['id']]);
+                $updOrder = $pdo->prepare('UPDATE orders SET gateway = "paypal", gateway_capture_id = ?, paypal_capture_id = ? WHERE id = ?');
+                $updOrder->execute([$capture['capture_id'], $capture['capture_id'], $order['id']]);
 
-            // Fulfill Order!
-            DeliveryService::fulfillOrder((int)$order['id']);
+                DeliveryService::fulfillOrder((int)$order['id']);
+                View::redirect("/order/thank-you/$orderNumber");
 
-            View::redirect("/order/thank-you/$orderNumber");
-
-        } catch (\Throwable $e) {
-            // Record failure
-            $failStmt = $pdo->prepare('
-                INSERT INTO transactions (order_id, paypal_order_id, payer_email, amount, currency, status, raw_payload)
-                VALUES (?, ?, ?, ?, ?, "FAILED", ?)
-            ');
-            $failStmt->execute([
-                $order['id'],
-                $paypalToken,
-                $order['buyer_email'],
-                $order['amount'],
-                $order['currency'],
-                json_encode(['error' => $e->getMessage()]),
-            ]);
-
-            Session::flash('error', 'Payment capture could not be confirmed: ' . $e->getMessage());
-            View::redirect('/');
+            } catch (\Throwable $e) {
+                // Ignore if webhook already fulfilled, else redirect
+                Session::flash('error', 'Payment capture: ' . $e->getMessage());
+                View::redirect("/order/thank-you/$orderNumber");
+            }
         }
+
+        // For other gateways (Fride.io, etc.), show thank you page where Webhook completes delivery
+        View::redirect("/order/thank-you/$orderNumber");
     }
 
     public function cancel(): void
